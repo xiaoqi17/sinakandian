@@ -45,7 +45,12 @@ def sinak_page_index(text):
         data = json.loads(text)  #用loads来解析json
         articles=data['result']['data']['articles']  #一层一层提取字典里keys()值
         for i in articles:
-            yield i['pub_url']
+            pub_url = i['pub_url']
+            print pub_url
+            if db[MONGO_TABLE].find_one({'pub_url':pub_url}):  #url去重，如果存在，提示爬过，否则else。
+                print '这url爬过'
+            else:
+                yield pub_url
     except:
         pass
 
@@ -76,17 +81,17 @@ def sinak_content(pub_url,headers):
         return None
 
 '''保存本地文件txt,csv,json格式的方式'''
-def write_to_file(content):
-    with open('sinakandian.txt', 'a', ) as f:
-        f.write(json.dumps(content, ensure_ascii=False) + '\n')  #关闭写入的文件中编码
-        f.close()
+# def write_to_file(content):
+#     with open('sinakandian.txt', 'a', ) as f:
+#         f.write(json.dumps(content, ensure_ascii=False) + '\n')  #关闭写入的文件中编码
+#         f.close()
 
 '''保存mongodb'''
-# def save_to_mongo(datail):
-#     if db[MONGO_TABLE].insert(datail):
-#         print('Successfully Saved to Mongo', datail)
-#         return True
-#     return False
+def save_to_mongo(datail):
+    if db[MONGO_TABLE].insert(datail):
+        print('Successfully Saved to Mongo', datail)
+        return True
+    return False
 
 def main(cstart):
     headers = {
@@ -100,13 +105,13 @@ def main(cstart):
             pass
         else:
             print datail
-            write_to_file(datail)  #保存本地文件
-            # if datail: save_to_mongo(datail)  #保存mongodb
+            # write_to_file(datail)  #保存本地文件
+            if datail: save_to_mongo(datail)  #保存mongodb
 
 
 if __name__ == '__main__':
-    # pool = Pool()   #默认线程数
-    pool = ThreadPool(16)   #指定线程数
+    pool = Pool()   #默认线程数
+    # pool = ThreadPool(16)   #指定线程数
     groups = ([x for x in range(GROUP_START, GROUP_END + 1)])  #构建多线程
     pool.map(main, groups)
     pool.close()
